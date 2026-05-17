@@ -1541,3 +1541,39 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   gap: 8px;
   margin-bottom: 4px;
 }
+
+/* ================================================================
+   MISSION CARD ANIMATIONS — diff updates
+   ================================================================ */
+
+@keyframes cardFlash {
+  0%   { box-shadow: 0 0 0 2px #4a90d9; }
+  100% { box-shadow: none; }
+}
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mission-card.card-flash {
+  animation: cardFlash 0.5s ease-out forwards;
+}
+.mission-card.card-entering {
+  animation: cardEnter 0.25s ease-out forwards;
+}
+
+/* ================================================================
+   QUICK LINKS — drag-and-drop states
+   ================================================================ */
+
+.quick-link-chip[draggable="true"] {
+  cursor: grab;
+}
+.quick-link-chip.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.quick-link-chip.drag-over {
+  outline: 2px solid #4a90d9;
+  outline-offset: 2px;
+}

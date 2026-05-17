@@ -1199,10 +1199,11 @@ async function renderStaticDashboard() {
   if (domainGroups.length > 0 && openTabsSection) {
     if (openTabsSectionTitle) openTabsSectionTitle.textContent = 'Open tabs';
     openTabsSectionCount.innerHTML = `${domainGroups.length} domain${domainGroups.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; <button class="action-btn close-tabs" data-action="close-all-open-tabs" style="font-size:11px;padding:3px 10px;">${ICONS.close} Close all ${realTabs.length} tabs</button>`;
-    openTabsMissionsEl.innerHTML = domainGroups.map(g => renderDomainCard(g)).join('');
     openTabsSection.style.display = 'block';
+    diffMissions(openTabsMissionsEl, domainGroups);
   } else if (openTabsSection) {
     openTabsSection.style.display = 'none';
+    if (openTabsMissionsEl) openTabsMissionsEl.innerHTML = '';
   }
 
   // --- Footer stats ---
@@ -1214,6 +1215,54 @@ async function renderStaticDashboard() {
 
   // --- Render "Saved for Later" column ---
   await renderDeferredColumn();
+}
+
+/* ----------------------------------------------------------------
+   DOM DIFF — update only changed mission cards, no full re-render
+   ---------------------------------------------------------------- */
+
+function diffMissions(container, newGroups) {
+  const existingMap = new Map();
+  container.querySelectorAll('.mission-card[data-domain-id]').forEach(el => {
+    existingMap.set(el.dataset.domainId, el);
+  });
+
+  const newIds = new Set(newGroups.map(g => 'domain-' + g.domain.replace(/[^a-z0-9]/g, '-')));
+
+  // Remove cards no longer in the list
+  existingMap.forEach((el, id) => {
+    if (!newIds.has(id)) el.remove();
+  });
+
+  // Insert, update, or reorder each card
+  for (const group of newGroups) {
+    const id          = 'domain-' + group.domain.replace(/[^a-z0-9]/g, '-');
+    const fingerprint = group.tabs.map(t => t.id).sort((a, b) => a - b).join(',');
+    const existing    = existingMap.get(id);
+
+    if (existing && existing.dataset.fingerprint === fingerprint) {
+      // Unchanged — just reorder cheaply (appendChild is a no-op if already last)
+      container.appendChild(existing);
+    } else {
+      // New or changed — build a fresh card
+      const temp = document.createElement('div');
+      temp.innerHTML = renderDomainCard(group);
+      const newEl = temp.firstElementChild;
+      if (!newEl) continue;
+      newEl.dataset.fingerprint = fingerprint;
+      if (existing) {
+        existing.remove();
+        newEl.classList.add('card-flash');
+      } else {
+        newEl.classList.add('card-entering');
+      }
+      container.appendChild(newEl);
+      // Two rAF frames so the browser paints the initial state first
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        newEl.classList.remove('card-flash', 'card-entering');
+      }));
+    }
+  }
 }
 
 /* ----------------------------------------------------------------
@@ -1353,15 +1402,48 @@ async function renderQuickLinks() {
   const s = await getSettings();
   if (!s.homepageSites.length) { bar.style.display = 'none'; return; }
   bar.style.display = '';
-  bar.innerHTML = s.homepageSites.map(site => {
+  bar.innerHTML = s.homepageSites.map((site, i) => {
     const path = (site.pathExact && site.pathExact[0]) || '/';
     const url  = `https://${escHtml(site.hostname)}${escHtml(path)}`;
-    return `<a class="quick-link-chip" href="${url}" target="_top">
+    return `<a class="quick-link-chip" href="${url}" target="_top"
+              draggable="true" data-ql-index="${i}">
       <img src="https://www.google.com/s2/favicons?domain=${escHtml(site.hostname)}&sz=16"
            alt="" class="chip-favicon" onerror="this.style.display='none'">
       <span>${escHtml(site.label)}</span>
     </a>`;
   }).join('');
+
+  // Drag-and-drop reordering
+  let dragSrcIndex = null;
+  bar.querySelectorAll('.quick-link-chip').forEach(chip => {
+    chip.addEventListener('dragstart', e => {
+      dragSrcIndex = Number(chip.dataset.qlIndex);
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('dragging');
+      bar.querySelectorAll('.quick-link-chip').forEach(c => c.classList.remove('drag-over'));
+    });
+    chip.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      bar.querySelectorAll('.quick-link-chip').forEach(c => c.classList.remove('drag-over'));
+      chip.classList.add('drag-over');
+    });
+    chip.addEventListener('dragleave', () => chip.classList.remove('drag-over'));
+    chip.addEventListener('drop', async e => {
+      e.preventDefault();
+      const targetIndex = Number(chip.dataset.qlIndex);
+      if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+      const fresh = await getSettings();
+      const sites = [...fresh.homepageSites];
+      const [moved] = sites.splice(dragSrcIndex, 1);
+      sites.splice(targetIndex, 0, moved);
+      await saveSettings({ homepageSites: sites });
+      renderQuickLinks();
+    });
+  });
 }
 
 async function renderDashboard() {
