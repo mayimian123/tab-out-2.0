@@ -1241,8 +1241,30 @@ async function renderSettingsPanel() {
   `;
 }
 
+/* ----------------------------------------------------------------
+   QUICK LINKS BAR — favourite sites always visible at top
+   ---------------------------------------------------------------- */
+
+async function renderQuickLinks() {
+  const bar = document.getElementById('quickLinksBar');
+  if (!bar) return;
+  const s = await getSettings();
+  if (!s.homepageSites.length) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  bar.innerHTML = s.homepageSites.map(site => {
+    const path = (site.pathExact && site.pathExact[0]) || '/';
+    const url  = `https://${escHtml(site.hostname)}${escHtml(path)}`;
+    return `<a class="quick-link-chip" href="${url}" target="_top">
+      <img src="https://www.google.com/s2/favicons?domain=${escHtml(site.hostname)}&sz=16"
+           alt="" class="chip-favicon" onerror="this.style.display='none'">
+      <span>${escHtml(site.label)}</span>
+    </a>`;
+  }).join('');
+}
+
 async function renderDashboard() {
   await renderStaticDashboard();
+  await renderQuickLinks();
 }
 
 
@@ -1286,6 +1308,7 @@ document.addEventListener('click', async (e) => {
     if (!hostname) return;
     await addHomepageSite(hostname, label);
     renderSettingsPanel();
+    renderQuickLinks();
     return;
   }
 
@@ -1295,6 +1318,7 @@ document.addEventListener('click', async (e) => {
     if (!hostname) return;
     await removeHomepageSite(hostname);
     renderSettingsPanel();
+    renderQuickLinks();
     return;
   }
 
@@ -1315,6 +1339,7 @@ document.addEventListener('click', async (e) => {
     await addHomepageSite(hostname, label);
     input.value = '';
     renderSettingsPanel();
+    renderQuickLinks();
     showToast(`已添加 ${label}`);
     return;
   }

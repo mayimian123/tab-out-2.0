@@ -1443,3 +1443,36 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   display: flex;
   justify-content: flex-end;
 }
+
+/* ================================================================
+   QUICK LINKS BAR — favourite sites shortcut row
+   ================================================================ */
+
+.quick-links-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0 20px;
+}
+
+.quick-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.quick-link-chip:hover {
+  background: var(--warm-gray);
+  border-color: var(--muted);
+  color: var(--ink);
+}
