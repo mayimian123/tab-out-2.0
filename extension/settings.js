@@ -3,6 +3,8 @@
 
 const SETTINGS_DEFAULTS = {
   theme: 'system',
+  name: '',
+  motto: '',
   homepageSites: [
     { hostname: 'mail.google.com', label: 'Gmail',    pathPrefix: '/', excludeHash: ['inbox/', 'sent/', 'search/'] },
     { hostname: 'x.com',           label: 'X',        pathExact: ['/home'] },

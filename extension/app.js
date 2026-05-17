@@ -838,8 +838,8 @@ function renderDomainCard(group) {
     if (!seen.has(tab.url)) { seen.add(tab.url); uniqueTabs.push(tab); }
   }
 
-  const visibleTabs = uniqueTabs.slice(0, 8);
-  const extraCount  = uniqueTabs.length - visibleTabs.length;
+  const visibleTabs = uniqueTabs; // show all tabs, no overflow cap
+  const extraCount  = 0;
 
   const pageChips = visibleTabs.map(tab => {
     let label = cleanTitle(smartTitle(stripTitleNoise(tab.title || ''), tab.url), group.domain);
@@ -1030,8 +1030,7 @@ async function renderStaticDashboard() {
   // --- Header ---
   const greetingEl = document.getElementById('greeting');
   const dateEl     = document.getElementById('dateDisplay');
-  if (greetingEl) greetingEl.textContent = getGreeting();
-  if (dateEl)     dateEl.textContent     = getDateDisplay();
+  if (dateEl) dateEl.textContent = getDateDisplay(); // date is sync, render immediately
 
   // --- Fetch tabs ---
   await fetchOpenTabs();
@@ -1041,6 +1040,8 @@ async function renderStaticDashboard() {
   // Landing pages (Gmail inbox, Twitter home, etc.) get their own special group
   // so they can be closed together without affecting content tabs on the same domain.
   const s = await getSettings();
+  renderGreeting(s); // update greeting + motto now that name/motto are loaded
+
   // Merge user settings with any patterns from config.local.js
   const allSites = [
     ...s.homepageSites,
@@ -1226,6 +1227,14 @@ async function renderSettingsPanel() {
     : '<div style="font-size:13px;color:var(--muted);padding:8px 0">还没有保存任何站点</div>';
 
   content.innerHTML = `
+    <div class="settings-section-label">个人设置</div>
+    <div class="settings-personal">
+      <input type="text" id="settingsNameInput" class="settings-input"
+             placeholder="你的名字，如 Lauren" value="${escHtml(s.name)}" autocomplete="off">
+      <input type="text" id="settingsMottoInput" class="settings-input"
+             placeholder="今日座右铭…" value="${escHtml(s.motto)}" autocomplete="off">
+    </div>
+    <div class="settings-divider"></div>
     ${quickAddHtml}
     <div class="settings-section-label">Homepages 站点</div>
     <div class="settings-sites-list">${sitesHtml}</div>
@@ -1239,6 +1248,36 @@ async function renderSettingsPanel() {
       <button class="action-btn danger" data-action="clear-archive">清空归档</button>
     </div>
   `;
+
+  // Blur-to-save for name and motto
+  const nameInput  = content.querySelector('#settingsNameInput');
+  const mottoInput = content.querySelector('#settingsMottoInput');
+  if (nameInput) nameInput.addEventListener('blur', async () => {
+    const cur = await getSettings();
+    await saveSettings({ name: nameInput.value.trim() });
+    renderGreeting({ ...cur, name: nameInput.value.trim() });
+  });
+  if (mottoInput) mottoInput.addEventListener('blur', async () => {
+    const cur = await getSettings();
+    await saveSettings({ motto: mottoInput.value.trim() });
+    renderGreeting({ ...cur, motto: mottoInput.value.trim() });
+  });
+}
+
+/* ----------------------------------------------------------------
+   GREETING + MOTTO
+   ---------------------------------------------------------------- */
+
+function renderGreeting(s) {
+  const greetingEl = document.getElementById('greeting');
+  const mottoEl    = document.getElementById('headerMotto');
+  if (greetingEl) {
+    greetingEl.textContent = s.name ? `${getGreeting()}, ${s.name}` : getGreeting();
+  }
+  if (mottoEl) {
+    if (s.motto) { mottoEl.textContent = s.motto; mottoEl.style.display = ''; }
+    else { mottoEl.style.display = 'none'; }
+  }
 }
 
 /* ----------------------------------------------------------------

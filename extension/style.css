@@ -1476,3 +1476,26 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   border-color: var(--muted);
   color: var(--ink);
 }
+
+/* ================================================================
+   HEADER MOTTO
+   ================================================================ */
+
+.header-motto {
+  font-family: 'Newsreader', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ================================================================
+   SETTINGS — personal section
+   ================================================================ */
+
+.settings-personal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
