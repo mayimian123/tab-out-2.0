@@ -1020,6 +1020,83 @@ async function renderDeferredColumn() {
   }
 }
 
+/* ----------------------------------------------------------------
+   TO-DO LIST
+   ---------------------------------------------------------------- */
+
+async function getTodos() {
+  const { todos = [] } = await chrome.storage.local.get('todos');
+  return todos;
+}
+
+async function saveTodos(todos) {
+  await chrome.storage.local.set({ todos });
+}
+
+function renderTodoItem(todo) {
+  return `
+    <div class="todo-item" data-todo-id="${escHtml(todo.id)}">
+      <input type="checkbox" class="todo-checkbox" data-action="check-todo" data-todo-id="${escHtml(todo.id)}">
+      <span class="todo-text">${escHtml(todo.text)}</span>
+      <button class="todo-delete" data-action="delete-todo" data-todo-id="${escHtml(todo.id)}" title="Remove">✕</button>
+    </div>`;
+}
+
+function renderTodoDoneItem(todo) {
+  return `
+    <div class="todo-done-item" data-todo-id="${escHtml(todo.id)}">
+      <span class="todo-done-text">${escHtml(todo.text)}</span>
+      <button class="todo-done-delete" data-action="delete-done-todo" data-todo-id="${escHtml(todo.id)}" title="Remove">✕</button>
+    </div>`;
+}
+
+async function renderTodoColumn() {
+  const listEl      = document.getElementById('todoList');
+  const emptyEl     = document.getElementById('todoEmpty');
+  const countEl     = document.getElementById('todoCount');
+  const doneArchive = document.getElementById('todoDoneArchive');
+  const doneCountEl = document.getElementById('todoDoneCount');
+  const doneListEl  = document.getElementById('todoDoneList');
+  if (!listEl) return;
+
+  const todos  = await getTodos();
+  const active = todos.filter(t => !t.done);
+  const done   = todos.filter(t => t.done);
+
+  countEl.textContent = active.length ? String(active.length) : '';
+
+  if (active.length > 0) {
+    listEl.innerHTML  = active.map(renderTodoItem).join('');
+    emptyEl.style.display = 'none';
+  } else {
+    listEl.innerHTML  = '';
+    emptyEl.style.display = 'block';
+  }
+
+  if (done.length > 0) {
+    doneCountEl.textContent = `(${done.length})`;
+    doneListEl.innerHTML    = done.map(renderTodoDoneItem).join('');
+    doneArchive.style.display = 'block';
+  } else {
+    doneArchive.style.display = 'none';
+  }
+}
+
+function initTodoInput() {
+  const input = document.getElementById('todoInput');
+  if (!input) return;
+  input.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Enter') return;
+    const text = input.value.trim();
+    if (!text) return;
+    const todos = await getTodos();
+    todos.unshift({ id: 'todo-' + Date.now(), text, done: false, doneAt: null });
+    await saveTodos(todos);
+    input.value = '';
+    renderTodoColumn();
+  });
+}
+
 /**
  * renderDeferredItem(item)
  *
@@ -1449,6 +1526,7 @@ async function renderQuickLinks() {
 async function renderDashboard() {
   await renderStaticDashboard();
   await renderQuickLinks();
+  await renderTodoColumn();
 }
 
 
@@ -1649,6 +1727,39 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  // ---- Check off a to-do (strikethrough for 1.5s, then moves to Done) ----
+  if (action === 'check-todo') {
+    const id   = actionEl.dataset.todoId;
+    const item = actionEl.closest('.todo-item');
+    if (item) item.classList.add('completing');
+    setTimeout(async () => {
+      const todos = await getTodos();
+      const todo  = todos.find(t => t.id === id);
+      if (todo) { todo.done = true; todo.doneAt = new Date().toISOString(); }
+      await saveTodos(todos);
+      renderTodoColumn();
+    }, 1500);
+    return;
+  }
+
+  // ---- Delete an active to-do permanently ----
+  if (action === 'delete-todo') {
+    const id = actionEl.dataset.todoId;
+    const todos = await getTodos();
+    await saveTodos(todos.filter(t => t.id !== id));
+    renderTodoColumn();
+    return;
+  }
+
+  // ---- Delete a done to-do permanently ----
+  if (action === 'delete-done-todo') {
+    const id = actionEl.dataset.todoId;
+    const todos = await getTodos();
+    await saveTodos(todos.filter(t => t.id !== id));
+    renderTodoColumn();
+    return;
+  }
+
   // ---- Check off a saved tab (moves it to archive, with 5s undo) ----
   if (action === 'check-deferred') {
     const id = actionEl.dataset.deferredId;
@@ -1810,6 +1921,18 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ---- To-do done toggle — expand/collapse the done section ----
+document.addEventListener('click', (e) => {
+  const toggle = e.target.closest('#todoDoneToggle');
+  if (!toggle) return;
+
+  toggle.classList.toggle('open');
+  const body = document.getElementById('todoDoneBody');
+  if (body) {
+    body.style.display = body.style.display === 'none' ? 'block' : 'none';
+  }
+});
+
 // ---- Archive search — filter archived items as user types ----
 document.addEventListener('input', async (e) => {
   if (e.target.id !== 'archiveSearch') return;
@@ -1845,4 +1968,5 @@ document.addEventListener('input', async (e) => {
    INITIALIZE
    ---------------------------------------------------------------- */
 initSearch();
+initTodoInput();
 initSettings().then(() => renderDashboard());
