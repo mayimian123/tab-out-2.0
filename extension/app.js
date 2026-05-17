@@ -1263,7 +1263,7 @@ async function renderSettingsPanel() {
   }
 
   const quickAddHtml = quickAdd.length > 0 ? `
-    <div class="settings-section-label">快速添加（当前标签页）</div>
+    <div class="settings-section-label">Quick add</div>
     <div class="settings-quick-add">
       ${quickAdd.map(q => `
         <button class="settings-quick-chip" data-action="quick-add-site"
@@ -1280,35 +1280,35 @@ async function renderSettingsPanel() {
              alt="" class="chip-favicon" onerror="this.style.display='none'">
         <span class="settings-site-label">${escHtml(site.label)}</span>
         <button class="settings-site-remove" data-action="remove-homepage-site"
-          data-hostname="${escHtml(site.hostname)}" title="移除">
+          data-hostname="${escHtml(site.hostname)}" title="Remove">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                stroke-width="2" stroke="currentColor" width="14" height="14">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
           </svg>
         </button>
       </div>`).join('')
-    : '<div style="font-size:13px;color:var(--muted);padding:8px 0">还没有保存任何站点</div>';
+    : '<div style="font-size:13px;color:var(--muted);padding:8px 0">No sites saved yet</div>';
 
   content.innerHTML = `
-    <div class="settings-section-label">个人设置</div>
+    <div class="settings-section-label">Personal</div>
     <div class="settings-personal">
       <input type="text" id="settingsNameInput" class="settings-input"
-             placeholder="你的名字，如 Lauren" value="${escHtml(s.name)}" autocomplete="off">
+             placeholder="Your name" value="${escHtml(s.name)}" autocomplete="off">
       <input type="text" id="settingsMottoInput" class="settings-input"
-             placeholder="今日座右铭…" value="${escHtml(s.motto)}" autocomplete="off">
+             placeholder="One note" value="${escHtml(s.motto)}" autocomplete="off">
     </div>
     <div class="settings-divider"></div>
     ${quickAddHtml}
-    <div class="settings-section-label">Homepages 站点</div>
+    <div class="settings-section-label">Homepages</div>
     <div class="settings-sites-list">${sitesHtml}</div>
     <div class="settings-add-manual">
       <input type="text" id="manualSiteInput" class="settings-input"
-             placeholder="输入网址，如 notion.so" autocomplete="off">
-      <button class="action-btn primary" data-action="add-manual-site">添加</button>
+             placeholder="Add URL, e.g. notion.so" autocomplete="off">
+      <button class="action-btn primary" data-action="add-manual-site">Add</button>
     </div>
     <div class="settings-divider"></div>
     <div class="settings-danger">
-      <button class="action-btn danger" data-action="clear-archive">清空归档</button>
+      <button class="action-btn danger" data-action="clear-archive">Clear archive</button>
     </div>
   `;
 
@@ -1433,16 +1433,16 @@ document.addEventListener('click', async (e) => {
     if (!raw.startsWith('http')) raw = 'https://' + raw;
     let hostname = '';
     try { hostname = new URL(raw).hostname; } catch {
-      showToast('无效的网址，请重新输入');
+      showToast('Invalid URL, please try again');
       return;
     }
-    if (!hostname) { showToast('无效的网址，请重新输入'); return; }
+    if (!hostname) { showToast('Invalid URL, please try again'); return; }
     const label = friendlyDomain(hostname);
     await addHomepageSite(hostname, label);
     input.value = '';
     renderSettingsPanel();
     renderQuickLinks();
-    showToast(`已添加 ${label}`);
+    showToast(`Added ${label}`);
     return;
   }
 
@@ -1451,7 +1451,7 @@ document.addEventListener('click', async (e) => {
     await clearArchive();
     await renderDeferredColumn();
     renderSettingsPanel();
-    showToast('已清空归档');
+    showToast('Archive cleared');
     return;
   }
 
@@ -1601,7 +1601,7 @@ document.addEventListener('click', async (e) => {
     if (!id) return;
     await restoreSavedTab(id);
     await renderDeferredColumn();
-    showToast('已恢复到待办');
+    showToast('Restored to list');
     return;
   }
 

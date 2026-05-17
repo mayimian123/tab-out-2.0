@@ -10,12 +10,15 @@ function applyTheme(theme) {
     : theme;
   document.documentElement.dataset.theme = effective;
   const icon = document.getElementById('themeToggleIcon');
-  if (icon) icon.textContent = { dark: '🌙', light: '☀️', system: '💻' }[theme] ?? '💻';
+  if (icon) icon.textContent = effective === 'dark' ? '🌙' : '☀️';
 }
 
 async function cycleTheme() {
   const s = await getSettings();
-  const next = { system: 'light', light: 'dark', dark: 'system' }[s.theme] ?? 'system';
+  const effective = s.theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : s.theme;
+  const next = effective === 'dark' ? 'light' : 'dark';
   await saveSettings({ theme: next });
   applyTheme(next);
 }
