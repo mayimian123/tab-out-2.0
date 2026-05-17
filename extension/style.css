@@ -936,8 +936,8 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(154, 145, 138, 0.12);
-  margin-bottom: 0;
+  border-top: 1px solid rgba(154, 145, 138, 0.12);
+  margin-top: 4px;
 }
 
 .todo-input-square {
@@ -946,7 +946,7 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   border: 1.5px solid var(--muted);
   border-radius: 2px;
   flex-shrink: 0;
-  opacity: 0.5;
+  background: transparent;
 }
 
 .todo-input {
@@ -982,12 +982,36 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 }
 
 .todo-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
   margin-top: 2px;
   flex-shrink: 0;
   cursor: pointer;
-  accent-color: var(--accent-amber);
   width: 14px;
   height: 14px;
+  border: 1.5px solid var(--muted);
+  border-radius: 2px;
+  background: transparent;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.todo-checkbox:checked {
+  background: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+.todo-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 5px;
+  height: 8px;
+  border: 1.5px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
 }
 
 .todo-text {

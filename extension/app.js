@@ -1025,7 +1025,7 @@ async function renderTodoColumn() {
   const active = todos.filter(t => !t.done);
   const done   = todos.filter(t => t.done);
 
-  countEl.textContent = active.length ? String(active.length) : '';
+  countEl.textContent = active.length ? `${active.length} task${active.length !== 1 ? 's' : ''}` : '';
 
   if (active.length > 0) {
     listEl.innerHTML  = active.map(renderTodoItem).join('');
