@@ -971,24 +971,32 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 .todo-section .section-header { animation: fadeUp 0.5s ease 0.1s both; }
 
 .todo-input-row {
-  margin: 12px 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(154, 145, 138, 0.12);
+  margin-bottom: 0;
+}
+
+.todo-input-square {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--muted);
+  border-radius: 2px;
+  flex-shrink: 0;
+  opacity: 0.5;
 }
 
 .todo-input {
-  width: 100%;
+  flex: 1;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--warm-gray);
   color: var(--ink);
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
-  padding: 6px 0;
+  padding: 0;
   outline: none;
-  transition: border-color 0.15s;
-}
-
-.todo-input:focus {
-  border-bottom-color: var(--accent-amber);
 }
 
 .todo-input::placeholder {
