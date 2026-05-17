@@ -143,8 +143,8 @@ async function focusTab(url) {
 
   if (matches.length === 0) return;
 
-  // Prefer a match in a different window so it actually switches windows
-  const match = matches.find(t => t.windowId !== currentWindow.id) || matches[0];
+  // Prefer the tab in the current window; fall back to another window
+  const match = matches.find(t => t.windowId === currentWindow.id) || matches[0];
   await chrome.tabs.update(match.id, { active: true });
   await chrome.windows.update(match.windowId, { focused: true });
 }
@@ -817,43 +817,6 @@ function checkTabOutDupes() {
 
 
 /* ----------------------------------------------------------------
-   OVERFLOW CHIPS ("+N more" expand button in domain cards)
-   ---------------------------------------------------------------- */
-
-function buildOverflowChips(hiddenTabs, urlCounts = {}) {
-  const hiddenChips = hiddenTabs.map(tab => {
-    const label    = cleanTitle(smartTitle(stripTitleNoise(tab.title || ''), tab.url), '');
-    const count    = urlCounts[tab.url] || 1;
-    const dupeTag  = count > 1 ? ` <span class="chip-dupe-badge">(${count}x)</span>` : '';
-    const chipClass = count > 1 ? ' chip-has-dupes' : '';
-    const safeUrl   = (tab.url || '').replace(/"/g, '&quot;');
-    const safeTitle = label.replace(/"/g, '&quot;');
-    let domain = '';
-    try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
-      ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
-      <span class="chip-text">${label}</span>${dupeTag}
-      <div class="chip-actions">
-        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
-        </button>
-        <button class="chip-action chip-close" data-action="close-single-tab" data-tab-url="${safeUrl}" title="Close this tab">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-
-  return `
-    <div class="page-chips-overflow" style="display:none">${hiddenChips}</div>
-    <div class="page-chip page-chip-overflow clickable" data-action="expand-chips">
-      <span class="chip-text">+${hiddenTabs.length} more</span>
-    </div>`;
-}
-
-
-/* ----------------------------------------------------------------
    DOMAIN CARD RENDERER
    ---------------------------------------------------------------- */
 
@@ -894,8 +857,7 @@ function renderDomainCard(group) {
     if (!seen.has(tab.url)) { seen.add(tab.url); uniqueTabs.push(tab); }
   }
 
-  const visibleTabs = uniqueTabs; // show all tabs, no overflow cap
-  const extraCount  = 0;
+  const visibleTabs = uniqueTabs;
 
   const pageChips = visibleTabs.map(tab => {
     let label = cleanTitle(smartTitle(stripTitleNoise(tab.title || ''), tab.url), group.domain);
@@ -924,7 +886,7 @@ function renderDomainCard(group) {
         </button>
       </div>
     </div>`;
-  }).join('') + (extraCount > 0 ? buildOverflowChips(uniqueTabs.slice(8), urlCounts) : '');
+  }).join('');
 
   let actionsHtml = `
     <button class="action-btn close-tabs" data-action="close-domain-tabs" data-domain-id="${stableId}">
@@ -1114,7 +1076,7 @@ function renderDeferredItem(item) {
       <input type="checkbox" class="deferred-checkbox" data-action="check-deferred" data-deferred-id="${item.id}">
       <div class="deferred-info">
         <a href="${item.url}" target="_blank" rel="noopener" class="deferred-title" title="${(item.title || '').replace(/"/g, '&quot;')}">
-          <img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" onerror="this.style.display='none'">${item.title || item.url}
+          <img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" onerror="this.style.display='none'">${escHtml(item.title || item.url)}
         </a>
         <div class="deferred-meta">
           <span>${domain}</span>
@@ -1168,8 +1130,7 @@ function renderArchiveItem(item) {
  */
 async function renderStaticDashboard() {
   // --- Header ---
-  const greetingEl = document.getElementById('greeting');
-  const dateEl     = document.getElementById('dateDisplay');
+  const dateEl = document.getElementById('dateDisplay');
   if (dateEl) dateEl.textContent = getDateDisplay(); // date is sync, render immediately
 
   // --- Fetch tabs ---
@@ -1275,9 +1236,11 @@ async function renderStaticDashboard() {
 
   if (domainGroups.length > 0 && openTabsSection) {
     if (openTabsSectionTitle) openTabsSectionTitle.textContent = 'Open tabs';
-    openTabsSectionCount.innerHTML = `${domainGroups.length} domain${domainGroups.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; <button class="action-btn close-tabs" data-action="close-all-open-tabs" style="font-size:11px;padding:3px 10px;">${ICONS.close} Close all ${realTabs.length} tabs</button>`;
+    if (openTabsSectionCount) openTabsSectionCount.innerHTML = `${domainGroups.length} domain${domainGroups.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; <button class="action-btn close-tabs" data-action="close-all-open-tabs" style="font-size:11px;padding:3px 10px;">${ICONS.close} Close all ${realTabs.length} tabs</button>`;
     openTabsSection.style.display = 'block';
     diffMissions(openTabsMissionsEl, domainGroups);
+    const _searchInput = document.getElementById('searchInput');
+    if (_searchInput?.value) filterTabs(_searchInput.value);
   } else if (openTabsSection) {
     openTabsSection.style.display = 'none';
     if (openTabsMissionsEl) openTabsMissionsEl.innerHTML = '';

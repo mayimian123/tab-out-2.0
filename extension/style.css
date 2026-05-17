@@ -159,44 +159,6 @@ header {
   transform: translateY(-1px);
 }
 
-/* ---- Nudge banner ---- */
-.nudge-banner {
-  background: linear-gradient(135deg, rgba(179, 90, 90, 0.04), rgba(179, 90, 90, 0.08));
-  border: 1px solid rgba(179, 90, 90, 0.15);
-  border-radius: 8px;
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 40px;
-}
-
-.nudge-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(179, 90, 90, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.nudge-icon svg {
-  width: 18px;
-  height: 18px;
-  color: var(--status-abandoned);
-}
-
-.nudge-text {
-  font-size: 13px;
-  color: var(--ink);
-  line-height: 1.5;
-}
-
-.nudge-text strong {
-  font-weight: 600;
-}
 
 /* ---- Section Headers ---- */
 .section-header {
@@ -692,7 +654,6 @@ footer {
 
 header { animation: fadeUp 0.5s ease both; }
 .tab-cleanup-banner { animation: fadeUp 0.5s ease 0.1s both; }
-.nudge-banner { animation: fadeUp 0.5s ease 0.15s both; }
 .active-section .section-header { animation: fadeUp 0.5s ease 0.2s both; }
 .active-section .missions .mission-card:nth-child(1) { animation: fadeUp 0.4s ease 0.25s both; }
 .active-section .missions .mission-card:nth-child(2) { animation: fadeUp 0.4s ease 0.3s both; }

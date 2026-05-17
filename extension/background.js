@@ -68,9 +68,11 @@ async function notifyActiveTab() {
   clearTimeout(_notifyTimer);
   _notifyTimer = setTimeout(async () => {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) await chrome.tabs.sendMessage(tab.id, { type: 'tabs-changed' });
-    } catch { /* tab may not be a Tab Out page — ignore */ }
+      const tabOutTabs = await chrome.tabs.query({ url: chrome.runtime.getURL('index.html') });
+      for (const tab of tabOutTabs) {
+        chrome.tabs.sendMessage(tab.id, { type: 'tabs-changed' }).catch(() => {});
+      }
+    } catch { /* ignore */ }
   }, 300);
 }
 
