@@ -276,6 +276,16 @@ async function checkOffSavedTab(id) {
   }
 }
 
+async function restoreSavedTab(id) {
+  const { deferred = [] } = await chrome.storage.local.get('deferred');
+  const tab = deferred.find(t => t.id === id);
+  if (tab) {
+    tab.completed = false;
+    delete tab.completedAt;
+    await chrome.storage.local.set({ deferred });
+  }
+}
+
 /**
  * dismissSavedTab(id)
  *
@@ -442,11 +452,57 @@ function animateCardOut(card) {
  *
  * Brief pop-up notification at the bottom of the screen.
  */
+let _undoToastTimer   = null;
+let _undoToastResolve = null;
+
 function showToast(message) {
-  const toast = document.getElementById('toast');
+  // Cancel any in-progress undo toast first
+  if (_undoToastTimer) {
+    clearTimeout(_undoToastTimer);
+    _undoToastTimer = null;
+    if (_undoToastResolve) { _undoToastResolve(false); _undoToastResolve = null; }
+  }
+  const toast   = document.getElementById('toast');
+  const undoBtn = document.getElementById('toastUndoBtn');
   document.getElementById('toastText').textContent = message;
+  if (undoBtn) undoBtn.style.display = 'none';
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+
+function showUndoToast(message, duration = 5000) {
+  // Cancel any previous undo toast (resolves false = not undone)
+  if (_undoToastTimer) {
+    clearTimeout(_undoToastTimer);
+    _undoToastTimer = null;
+    if (_undoToastResolve) { _undoToastResolve(false); _undoToastResolve = null; }
+  }
+  return new Promise(resolve => {
+    _undoToastResolve = resolve;
+    const toast   = document.getElementById('toast');
+    const textEl  = document.getElementById('toastText');
+    const undoBtn = document.getElementById('toastUndoBtn');
+    textEl.textContent = message;
+    if (undoBtn) undoBtn.style.display = '';
+    toast.classList.add('visible');
+
+    let settled = false;
+    const finish = (undone) => {
+      if (settled) return;
+      settled = true;
+      _undoToastTimer = null;
+      _undoToastResolve = null;
+      toast.classList.remove('visible');
+      if (undoBtn) undoBtn.style.display = 'none';
+      resolve(undone);
+    };
+
+    _undoToastTimer = setTimeout(() => finish(false), duration);
+    if (undoBtn) undoBtn.addEventListener('click', () => {
+      clearTimeout(_undoToastTimer);
+      finish(true);
+    }, { once: true });
+  });
 }
 
 /**
@@ -1000,13 +1056,20 @@ function renderDeferredItem(item) {
  * Builds HTML for one completed/archived item (simpler: just title + date).
  */
 function renderArchiveItem(item) {
-  const ago = item.completedAt ? timeAgo(item.completedAt) : timeAgo(item.savedAt);
+  const ago       = item.completedAt ? timeAgo(item.completedAt) : timeAgo(item.savedAt);
+  const safeTitle = (item.title || item.url).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const safeUrl   = (item.url || '').replace(/"/g, '&quot;');
   return `
     <div class="archive-item">
-      <a href="${item.url}" target="_blank" rel="noopener" class="archive-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">
-        ${item.title || item.url}
+      <a href="${safeUrl}" target="_blank" rel="noopener" class="archive-item-title" title="${safeTitle}">
+        ${safeTitle}
       </a>
       <span class="archive-item-date">${ago}</span>
+      <button class="archive-restore-btn" data-action="restore-deferred" data-deferred-id="${item.id}" title="恢复到待办">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="12" height="12">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+        </svg>
+      </button>
     </div>`;
 }
 
@@ -1504,25 +1567,41 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // ---- Check off a saved tab (moves it to archive) ----
+  // ---- Check off a saved tab (moves it to archive, with 5s undo) ----
   if (action === 'check-deferred') {
     const id = actionEl.dataset.deferredId;
     if (!id) return;
 
     await checkOffSavedTab(id);
 
-    // Animate: strikethrough first, then slide out
     const item = actionEl.closest('.deferred-item');
-    if (item) {
-      item.classList.add('checked');
-      setTimeout(() => {
+    if (item) item.classList.add('checked');
+
+    const undone = await showUndoToast('已完成', 5000);
+
+    if (undone) {
+      await restoreSavedTab(id);
+      if (item) item.classList.remove('checked');
+      if (actionEl.tagName === 'INPUT') actionEl.checked = false;
+      await renderDeferredColumn();
+    } else {
+      if (item) {
         item.classList.add('removing');
-        setTimeout(() => {
-          item.remove();
-          renderDeferredColumn(); // refresh counts and archive
-        }, 300);
-      }, 800);
+        setTimeout(() => { item.remove(); renderDeferredColumn(); }, 300);
+      } else {
+        renderDeferredColumn();
+      }
     }
+    return;
+  }
+
+  // ---- Restore an archived tab back to active list ----
+  if (action === 'restore-deferred') {
+    const id = actionEl.dataset.deferredId;
+    if (!id) return;
+    await restoreSavedTab(id);
+    await renderDeferredColumn();
+    showToast('已恢复到待办');
     return;
   }
 
