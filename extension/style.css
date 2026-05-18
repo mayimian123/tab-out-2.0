@@ -1020,6 +1020,21 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   color: var(--ink);
   line-height: 1.4;
   word-break: break-word;
+  cursor: text;
+}
+
+.todo-edit-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--accent-amber);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 0 0 1px;
+  outline: none;
+  line-height: 1.4;
+  min-width: 0;
 }
 
 .todo-item.completing .todo-text {
@@ -1599,8 +1614,14 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 
 .settings-add-manual {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+}
+
+.settings-add-row {
+  display: flex;
+  gap: 8px;
 }
 
 .settings-input {

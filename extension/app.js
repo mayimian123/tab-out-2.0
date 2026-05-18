@@ -999,7 +999,7 @@ function renderTodoItem(todo) {
   return `
     <div class="todo-item" data-todo-id="${escHtml(todo.id)}">
       <input type="checkbox" class="todo-checkbox" data-action="check-todo" data-todo-id="${escHtml(todo.id)}">
-      <span class="todo-text">${escHtml(todo.text)}</span>
+      <span class="todo-text" data-action="edit-todo" title="Click to edit">${escHtml(todo.text)}</span>
       <button class="todo-delete" data-action="delete-todo" data-todo-id="${escHtml(todo.id)}" title="Remove">✕</button>
     </div>`;
 }
@@ -1391,9 +1391,13 @@ async function renderSettingsPanel() {
     <div class="settings-section-label">Homepages</div>
     <div class="settings-sites-list">${sitesHtml}</div>
     <div class="settings-add-manual">
-      <input type="text" id="manualSiteInput" class="settings-input"
-             placeholder="Add URL, e.g. notion.so" autocomplete="off">
-      <button class="action-btn primary" data-action="add-manual-site">Add</button>
+      <input type="text" id="manualNameInput" class="settings-input"
+             placeholder="Name (optional)" autocomplete="off">
+      <div class="settings-add-row">
+        <input type="text" id="manualSiteInput" class="settings-input"
+               placeholder="URL, e.g. notion.so" autocomplete="off">
+        <button class="action-btn primary" data-action="add-manual-site">Add</button>
+      </div>
     </div>
     <div class="settings-divider"></div>
     <div class="settings-danger">
@@ -1549,7 +1553,8 @@ document.addEventListener('click', async (e) => {
 
   // ---- Add site via manual input ----
   if (action === 'add-manual-site') {
-    const input = document.getElementById('manualSiteInput');
+    const input     = document.getElementById('manualSiteInput');
+    const nameInput = document.getElementById('manualNameInput');
     if (!input) return;
     let raw = input.value.trim();
     if (!raw) return;
@@ -1560,9 +1565,11 @@ document.addEventListener('click', async (e) => {
       return;
     }
     if (!hostname) { showToast('Invalid URL, please try again'); return; }
-    const label = friendlyDomain(hostname);
+    const customName = nameInput ? nameInput.value.trim() : '';
+    const label = customName || friendlyDomain(hostname);
     await addHomepageSite(hostname, label);
     input.value = '';
+    if (nameInput) nameInput.value = '';
     renderSettingsPanel();
     renderQuickLinks();
     showToast(`Added ${label}`);
@@ -1687,6 +1694,39 @@ document.addEventListener('click', async (e) => {
 
     showToast('Saved for later');
     await renderDeferredColumn();
+    return;
+  }
+
+  // ---- Inline-edit a to-do text ----
+  if (action === 'edit-todo') {
+    const item = actionEl.closest('.todo-item');
+    if (!item) return;
+    const id = item.dataset.todoId;
+    const currentText = actionEl.textContent;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'todo-edit-input';
+    input.value = currentText;
+    actionEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const save = async () => {
+      const newText = input.value.trim();
+      if (newText && newText !== currentText) {
+        const todos = await getTodos();
+        const todo  = todos.find(t => t.id === id);
+        if (todo) { todo.text = newText; await saveTodos(todos); }
+      }
+      renderTodoColumn();
+    };
+
+    input.addEventListener('blur', save, { once: true });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = currentText; input.blur(); }
+    });
     return;
   }
 
