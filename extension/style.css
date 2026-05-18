@@ -1043,6 +1043,30 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   transition: color 0.3s;
 }
 
+.todo-drag-handle {
+  opacity: 0;
+  cursor: grab;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0 2px;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.todo-item:hover .todo-drag-handle {
+  opacity: 0.5;
+}
+
+.todo-item.dragging {
+  opacity: 0.4;
+}
+
+.todo-item.drag-over {
+  border-top: 2px solid var(--accent-amber);
+}
+
 .todo-delete {
   opacity: 0;
   background: none;

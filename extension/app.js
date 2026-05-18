@@ -997,7 +997,8 @@ async function saveTodos(todos) {
 
 function renderTodoItem(todo) {
   return `
-    <div class="todo-item" data-todo-id="${escHtml(todo.id)}">
+    <div class="todo-item" data-todo-id="${escHtml(todo.id)}" draggable="true">
+      <span class="todo-drag-handle" title="Drag to reorder">⠿</span>
       <input type="checkbox" class="todo-checkbox" data-action="check-todo" data-todo-id="${escHtml(todo.id)}">
       <span class="todo-text" data-action="edit-todo" title="Click to edit">${escHtml(todo.text)}</span>
       <button class="todo-delete" data-action="delete-todo" data-todo-id="${escHtml(todo.id)}" title="Remove">✕</button>
@@ -1030,6 +1031,7 @@ async function renderTodoColumn() {
   if (active.length > 0) {
     listEl.innerHTML  = active.map(renderTodoItem).join('');
     emptyEl.style.display = 'none';
+    initTodoDragDrop(listEl);
   } else {
     listEl.innerHTML  = '';
     emptyEl.style.display = 'block';
@@ -1044,6 +1046,48 @@ async function renderTodoColumn() {
   }
 }
 
+function initTodoDragDrop(listEl) {
+  let dragSrcId = null;
+
+  listEl.querySelectorAll('.todo-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragSrcId = item.dataset.todoId;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      listEl.querySelectorAll('.todo-item').forEach(i => i.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      listEl.querySelectorAll('.todo-item').forEach(i => i.classList.remove('drag-over'));
+      if (item.dataset.todoId !== dragSrcId) item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', async e => {
+      e.preventDefault();
+      const targetId = item.dataset.todoId;
+      if (!dragSrcId || dragSrcId === targetId) return;
+
+      const todos  = await getTodos();
+      const active = todos.filter(t => !t.done);
+      const done   = todos.filter(t => t.done);
+
+      const srcIdx = active.findIndex(t => t.id === dragSrcId);
+      if (srcIdx === -1) return;
+      const [moved] = active.splice(srcIdx, 1);
+      const newTgtIdx = active.findIndex(t => t.id === targetId);
+      if (newTgtIdx === -1) return;
+      active.splice(newTgtIdx, 0, moved);
+
+      await saveTodos([...active, ...done]);
+      renderTodoColumn();
+    });
+  });
+}
+
 function initTodoInput() {
   const input = document.getElementById('todoInput');
   if (!input) return;
@@ -1052,7 +1096,7 @@ function initTodoInput() {
     const text = input.value.trim();
     if (!text) return;
     const todos = await getTodos();
-    todos.unshift({ id: 'todo-' + Date.now(), text, done: false, doneAt: null });
+    todos.push({ id: 'todo-' + Date.now(), text, done: false, doneAt: null });
     await saveTodos(todos);
     input.value = '';
     renderTodoColumn();
