@@ -34,6 +34,30 @@
   opacity: 0.06;
 }
 
+/* ---- Midnight Indigo theme ---- */
+[data-theme="midnight"] {
+  --ink: #e4e2f5;
+  --paper: #0d0c1e;
+  --warm-gray: #222040;
+  --muted: #7874a0;
+  --card-bg: #131228;
+  --shadow: rgba(0, 0, 0, 0.5);
+  /* Keep accent colors — they glow beautifully on indigo */
+}
+
+[data-theme="midnight"] body::before {
+  opacity: 0.04;
+}
+
+[data-theme="midnight"] .mission-card:hover {
+  box-shadow: 0 4px 24px rgba(200, 113, 58, 0.12);
+}
+
+[data-theme="midnight"] .quick-link-chip:hover {
+  border-color: rgba(200, 113, 58, 0.4);
+  background: rgba(200, 113, 58, 0.06);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -1717,10 +1741,15 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 
 .header-motto {
   font-family: 'Newsreader', serif;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 300;
   font-style: italic;
-  color: var(--muted);
-  margin-top: 4px;
+  color: var(--ink);
+  opacity: 0.6;
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-amber);
+  line-height: 1.4;
 }
 
 /* ================================================================
